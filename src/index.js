@@ -1,10 +1,11 @@
 import React, {useEffect, useState} from 'react';
+import axios from 'axios';
 import ReactDOM from 'react-dom';
-import {browserHistory} from 'react-router';
-import {BrowserRouter as Router, Route, Redirect} from 'react-router-dom'
+import {browserHistory} from 'react-router-dom';
+import {BrowserRouter as Router, Route, Redirect, Link} from 'react-router-dom'
 
 import {makeStyles} from '@material-ui/core/styles';
-import {Container, Paper, Typography, TextField, Button, IconButton, AppBar, Toolbar} from '@material-ui/core';
+import {Container, Paper, Typography, TextField, Button, IconButton, AppBar, Toolbar, Grid, Menu, MenuItem} from '@material-ui/core';
 import {MenuIcon} from '@material-ui/icons/Menu';
 
 import 'typeface-roboto';
@@ -31,18 +32,35 @@ const useStyles = makeStyles(theme => ({
     menuButton: {
         marginRight: theme.spacing(2),
     },
+    paperButton: {
+        textAlign: 'justify'
+    },
     title: {
         flexGrow: 1,
     },
+    paper: {
+        padding: theme.spacing(2),
+        textAlign: 'center',
+        color: theme.palette.text.secondary,
+    },
 }));
 
-const URL = "http://localhost:5000";
+const URL = "http://0.0.0.0:5000";
 
 const Nav = () => {
     const classes = useStyles();
+    const [anchorEl, setAnchorEl] = React.useState(null);
 
-    const handleRedirect = () => event => {
-        console.log("Should redirect to '/'")
+    const handleClick = event => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleRedirect = (url) => event => {
+        console.log(url);
     };
 
     return (
@@ -50,9 +68,23 @@ const Nav = () => {
             <AppBar position="static">
                 <Toolbar>
                     <Typography variant="h6" className={classes.title}>
-                        News
+                        jiz
                     </Typography>
-                    <Button onClick={handleRedirect()}>Login</Button>
+                    <Button aria-controls="navMenu"i aria-haspopup="true" onClick={handleClick}>
+                        go to
+                    </Button>
+                    <Menu
+                        id="simple-menu"
+                        anchorEl={anchorEl}
+                        keepMounted
+                        open={Boolean(anchorEl)}
+                        onClose={handleClose}
+                    >
+                        <MenuItem><Button component={Link} to={"/"}>home</Button></MenuItem>
+                        <MenuItem><Button component={Link} to={"/login"}>login</Button></MenuItem>
+                        <MenuItem><Button component={Link} to={"/u/1"}>profile</Button></MenuItem>
+                        <MenuItem><Button component={Link} to={"/ranking"}>ranking</Button></MenuItem>
+                    </Menu>
                 </Toolbar>
             </AppBar>
         </div>
@@ -180,23 +212,81 @@ const Login = () => {
     ]);
 };
 
-const Root = () => {
-    return (
-        <Container maxwidth="sm" classname="root">
-        <Typography variant="h1" component="h1">
-        jizz
+const Home = () => {
+    const [stack, setStack] = useState([]);
+    const classes = useStyles();
+
+    useEffect(() => {
+        getStack();
+    }, []);
+
+    async function getStack() {
+        const r = await fetch(URL + "/u/1/s");
+        const stack = await r.json();
+        setStack(stack.data);
+    }
+
+    const handleChoice = (choice) => event => {
+        event.preventDefault();
+        console.log(`User selected: ${choice}`);
+        
+        const r_url = `${URL}/u/1/v`;
+
+        axios.post(`${r_url}/${stack[choice].id}/1`)
+            .then(data => console.log("OK:" + data))
+            .catch(e => console.log("Error: " + e));
+        
+        const other = (choice == 0) ? 1 : 0;
+
+        axios.post(`${r_url}/${stack[other].id}/0`)
+            .then(data => console.log("OK:" + data))
+            .catch(e => console.log("Error: " + e));
+    };
+
+    return ([
+        <Nav />,
+        <Container maxwidth="sm" className="root">
+        <Typography variant="h2" component="h1">
+        If u wanna get rich, u better vote bitx!
         </Typography>
-        </Container>
-    );
+        <br></br>
+        <Grid
+            container
+            direction="row"
+            justify="center"
+            alignItems="center"
+            spacing={2}
+        >
+            <Grid item xs>
+                <Paper className={classes.paper} onClick={handleChoice(0)} component={Button} to={"/"}>
+                    <Typography component="p">
+                        <b>{stack[0] && stack[0].content}</b>
+                        <br></br>
+                        by <i>user_{stack[0] && stack[0].user_id}</i> 
+                    </Typography>
+                </Paper> 
+            </Grid>
+            <Grid item xs>
+                <Paper className={classes.paper} onClick={handleChoice(1)} component={Button} to={"/"}>
+                    <Typography component="p">
+                        <b>{stack[1] && stack[1].content}</b> 
+                        <br></br>
+                        by <i>user_{stack[1] && stack[1].user_id}</i> 
+                    </Typography>
+                </Paper> 
+            </Grid>
+        </Grid>
+    </Container>
+    ]);
 };
 
 ReactDOM.render(
-    <Router>
-        <Route exact path="/" component={Login}/>
-        <Route path="/login" component={Login}/>
-        <Route path="/register" component={Login}/>
-        <Route path="/u/:id" component={User}/>
-        <Route path="/ranking" component={Ranking}/>
-    </Router>,
-    document.getElementById('root')
+<Router>
+    <Route exact path="/" component={Home}/>
+    <Route path="/login" component={Login}/>
+    <Route path="/register" component={Login}/>
+    <Route path="/u/:id" component={User}/>
+    <Route path="/ranking" component={Ranking}/>
+</Router>,
+document.getElementById('root')
 );
